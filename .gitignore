@@ -3,3 +3,4 @@
 job*
 *.tgz
 benchmark-*
+auto_*.c
