@@ -1,0 +1,5 @@
+*.o
+*.s
+job*
+*.tgz
+benchmark-*

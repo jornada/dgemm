@@ -30,8 +30,9 @@ LDFLAGS = -Wall
 # librt is needed for clock_gettime
 LDLIBS = -lrt
 
-targets = benchmark-naive benchmark-blocked benchmark-blas benchmark-jornada benchmark-recursive
-objects = benchmark.o dgemm-naive.o dgemm-blocked.o dgemm-blas.o dgemm-jornada.o dgemm-recursive.o
+sources = dgemm-*.c
+targets = $(sources:dgemm-%.c=benchmark-%)
+objects = benchmark.o $(sources:.c=.o)
 
 .PHONY : default
 default : all
@@ -43,11 +44,13 @@ all : clean_jornada $(targets)
 
 .PHONY :  clean_jornada
 clean_jornada:
-	rm dgemm-jornada.o
+	rm -f dgemm-jornada.o dgemm-jornada-sse.o
 
 benchmark-naive : benchmark.o dgemm-naive.o 
 	$(CC) -o $@ $^ $(LDFLAGS) $(LDLIBS)
 benchmark-recursive : benchmark.o dgemm-recursive.o
+	$(CC) -o $@ $^ $(LDFLAGS) $(LDLIBS)
+benchmark-jornada-sse : benchmark.o dgemm-jornada-sse.o
 	$(CC) -o $@ $^ $(LDFLAGS) $(LDLIBS)
 benchmark-jornada : benchmark.o dgemm-jornada.o
 	$(CC) -o $@ $^ $(LDFLAGS) $(LDLIBS)
