@@ -215,8 +215,9 @@ void square_dgemm (int lda, double* restrict A, double* restrict B, double* rest
 	//TODO: blocked version?
 	
 #ifdef TRANSPOSE
-	lda_A = (lda/16)*16;
-	if (lda%16) lda_A += 16;
+	//lda_A = (lda/2)*2;
+	//if (lda%2) lda_A += 1;
+	lda_A = ((lda+1)>>1)<<1;
 	posix_memalign((void**) &A_T, 16, sizeof(double)*lda_A*lda);
 	//A_T = (double*) malloc(sizeof(double)*lda*lda);
 	for (int i=0; i<lda; i++)

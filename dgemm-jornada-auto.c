@@ -26,6 +26,8 @@ const char* dgemm_desc = "jornada1";
 
 #include "auto_blocks_inc.c"
 
+static int lda_A;
+
 /* This auxiliary subroutine performs a smaller dgemm operation
  *	C := C + A * B
  * where C is M-by-N, A is M-by-K, and B is K-by-N. */
@@ -55,7 +57,7 @@ static void do_block_T (int lda, int M, int N, int K, double* restrict A_T, doub
 		/* For each row i of A */
 		int i_lda = 0;
 		int ij_lda = j_lda;
-		for (int i = 0; i < M; ++i, i_lda+=lda, ij_lda++) {
+		for (int i = 0; i < M; ++i, i_lda+=lda_A, ij_lda++) {
 			//__builtin_prefetch(A_T + i_lda, 0, 2);
 			/* Compute C(i,j) */
 			double cij = C[ij_lda];
@@ -91,6 +93,7 @@ static void do_exact_block (int lda, double* restrict A, double* restrict B, dou
 	}
 }
 
+#if 1
 //transposed version
 static void do_exact_block_T (int lda, double* restrict A_T, double* restrict B, double* restrict C) {
 	/* For each column j of B */ 
@@ -99,7 +102,7 @@ static void do_exact_block_T (int lda, double* restrict A_T, double* restrict B,
 		/* For each row i of A */
 		int i_lda = 0;
 		int ij_lda = j_lda;
-		for (int i = 0; i < BLOCK_SIZE1; ++i, i_lda+=lda, ij_lda++) {
+		for (int i = 0; i < BLOCK_SIZE1; ++i, i_lda+=lda_A, ij_lda++) {
 			/* Compute C(i,j) */
 			double cij = C[ij_lda];
 			int ki_lda = i_lda;
@@ -111,6 +114,23 @@ static void do_exact_block_T (int lda, double* restrict A_T, double* restrict B,
 		}
 	}
 }
+#else
+static void do_exact_block_T (int lda, double* restrict A_T, double* restrict B, double* restrict C) {
+	/* For each column j of B */ 
+	for (int j = 0; j < BLOCK_SIZE1; j++) {
+		/* For each row i of A */
+		for (int i = 0; i < BLOCK_SIZE1; i++) {
+			/* Compute C(i,j) */
+			double cij = C[i + j*lda];
+			for (int k = 0; k < BLOCK_SIZE1; k++) {
+				cij += A_T[i*lda_A + k] * B[j*lda + k];
+			}
+			C[i + j*lda] = cij;
+		}
+	}
+}
+#endif
+
 
 static void L1_dgemm (int lda, int I, int J, int K, double* restrict A_T, double* restrict B, double* restrict C) {
 	/* For each block-column of B */
@@ -125,14 +145,14 @@ static void L1_dgemm (int lda, int I, int J, int K, double* restrict A_T, double
 				//__builtin_prefetch(C   + i + j*lda, 0, 2);
 				if ( (i<=(I-BLOCK_SIZE1)) && (j<=(J-BLOCK_SIZE1)) && (k<=(K-BLOCK_SIZE1))){
 					//do_exact_block(lda, A + i + k*lda, B + k + j*lda, C + i + j*lda);
-					do_exact_block_T(lda, A_T + k + i*lda, B + k + j*lda, C + i + j*lda);
+					do_exact_block_T(lda, A_T + k + i*lda_A, B + k + j*lda, C + i + j*lda);
 				} else {
 					/* Correct block dimensions if block "goes off edge of" the matrix */
 					int I_ = min (BLOCK_SIZE1, I-i);
 					int J_ = min (BLOCK_SIZE1, J-j);
 					int K_ = min (BLOCK_SIZE1, K-k);
 					/* Perform individual block dgemm */
-					do_block_T(lda, I_, J_, K_, A_T + k + i*lda, B + k + j*lda, C + i + j*lda);
+					do_block_T(lda, I_, J_, K_, A_T + k + i*lda_A, B + k + j*lda, C + i + j*lda);
 				}
 			}
 }
@@ -146,17 +166,17 @@ static void L1_dgemm_exact (int lda, double* restrict A_T, double* restrict B, d
 			/* Accumulate block dgemms into block of C */
 			for (int k = 0; k < BLOCK_SIZE2; k += BLOCK_SIZE1) {
 #ifdef ALIGNED_BLOCKS
-				do_exact_block_T(lda, A_T + k + i*lda, B + k + j*lda, C + i + j*lda);
+				do_exact_block_T(lda, A_T + k + i*lda_A, B + k + j*lda, C + i + j*lda);
 #else
 				if ( (i<=(BLOCK_SIZE2-BLOCK_SIZE1)) && (j<=(BLOCK_SIZE2-BLOCK_SIZE1)) && (k<=(BLOCK_SIZE2-BLOCK_SIZE1)) ){
-					do_exact_block_T(lda, A_T + k + i*lda, B + k + j*lda, C + i + j*lda);
+					do_exact_block_T(lda, A_T + k + i*lda_A, B + k + j*lda, C + i + j*lda);
 				} else {
 					/* Correct block dimensions if block "goes off edge of" the matrix */
 					int I_ = min (BLOCK_SIZE1, BLOCK_SIZE2-i);
 					int J_ = min (BLOCK_SIZE1, BLOCK_SIZE2-j);
 					int K_ = min (BLOCK_SIZE1, BLOCK_SIZE2-k);
 					/* Perform individual block dgemm */
-					do_block_T(lda, I_, J_, K_, A_T + k + i*lda, B + k + j*lda, C + i + j*lda);
+					do_block_T(lda, I_, J_, K_, A_T + k + i*lda_A, B + k + j*lda, C + i + j*lda);
 				}
 #endif
 			}
@@ -171,7 +191,7 @@ inline static void L2_dgemm (int lda, double* restrict A_T, double* restrict B, 
 			for (int k = 0; k < lda; k += BLOCK_SIZE2) {
 				if ( (i<=(lda-BLOCK_SIZE2)) && (j<=(lda-BLOCK_SIZE2)) && (k<=(lda-BLOCK_SIZE2)) ){
 					//do_exact_block(lda, A + i + k*lda, B + k + j*lda, C + i + j*lda);
-					L1_dgemm_exact(lda, A_T + k + i*lda, B + k + j*lda, C + i + j*lda);
+					L1_dgemm_exact(lda, A_T + k + i*lda_A, B + k + j*lda, C + i + j*lda);
 				} else {
 					/* Correct block dimensions if block "goes off edge of" the matrix */
 					int I_ = min (BLOCK_SIZE2, lda-i);
@@ -180,7 +200,7 @@ inline static void L2_dgemm (int lda, double* restrict A_T, double* restrict B, 
 					/* Perform individual block dgemm */
 					//do_block_T(lda, M, N, K, A_T + k + i*lda, B + k + j*lda, C + i + j*lda);
 
-					L1_dgemm(lda, I_, J_, K_, A_T + k + i*lda, B + k + j*lda, C + i + j*lda);
+					L1_dgemm(lda, I_, J_, K_, A_T + k + i*lda_A, B + k + j*lda, C + i + j*lda);
 				}
 			}
 }
@@ -193,17 +213,16 @@ void square_dgemm (int lda, double* restrict A, double* restrict B, double* rest
 	double* restrict A_T;
 
 	//transpose A
-	//TODO: blocked version?
 #ifdef TRANSPOSE
-	A_T = (double*) malloc(sizeof(double)*lda*lda);
+	lda_A = ((lda+1)>>1)<<1;
+	posix_memalign((void**) &A_T, 16, sizeof(double)*lda_A*lda);
 	for (int i=0; i<lda; i++)
 		for (int j=0; j<lda; j++)
-			A_T[i + lda*j] = A[i*lda + j];
+			A_T[i + lda_A*j] = A[i*lda + j];
 #endif
 
 	if (lda<=BLOCK_SIZE1) {
-		//do_block_T(lda, lda, lda, lda, A_T, B, C);
-		exact_blocks[lda](lda, A_T, B, C);
+		exact_blocks[lda](A_T, B, C);
 	} else if (lda<=BLOCK_SIZE2){
 		L1_dgemm(lda, lda, lda, lda, A_T, B, C);
 	} else {
