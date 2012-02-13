@@ -5,9 +5,28 @@
 CC = cc 
 #OPT = -O3 -ffast-math -funroll-loops -fstrict-aliasing -funsafe-loop-optimizations -march=native -msse -msse2 -msse3 -mfpmath=both
 #OPT = -O3 -ffast-math -funroll-loops -fstrict-aliasing -funsafe-loop-optimizations -march=native -msse3 -mfpmath=both
-OPT = -O3 -ffast-math -funroll-loops -fno-inline -fstrict-aliasing -funsafe-loop-optimizations -march=native -msse3 -mfpmath=both
-CFLAGS = -Wall -std=gnu99 $(OPT) -S #-fprofile-use
-LDFLAGS = -Wall #-fprofile-use
+
+#OPT = -O3 -ffast-math -funroll-loops -fstrict-aliasing -funsafe-loop-optimizations -msse -msse2 -msse3 -mfpmath=sse -fprofile-arcs
+#OPT = -O3 -ffast-math -funroll-loops -fstrict-aliasing -funsafe-loop-optimizations -msse -msse2 -msse3 -mfpmath=both -fprofile-use
+OPT = -O3 -ffast-math -funroll-loops -fstrict-aliasing -funsafe-loop-optimizations -msse -msse2 -msse3 -mfpmath=both
+#OPT = -O3 -ffast-math -funroll-loops -fno-inline -fstrict-aliasing -funsafe-loop-optimizations -march=native -msse3 -mfpmath=both
+#PGI
+#OPT = -fast -fastsse -O4 -Mvect -Munroll
+#Pathscale
+#OPT = -Ofast -std=gnu99 -msse -msse2 -msse3 -msse4a -ffast-math
+#OPT = -std=gnu99 -msse -msse2 -msse3 -msse4a -O4 -ffast-math
+
+
+CFLAGS = -Wall -std=gnu99 $(OPT) #-fprofile-use
+#PGI
+#CFLAGS = -Minform=inform -c99 $(OPT) #-fprofile-use
+#CFLAGS = $(OPT)
+LDFLAGS = -Wall
+#LDFLAGS = -Wall -fprofile-use
+#LDFLAGS = -Wall -fprofile-arcs
+#PGI
+#LDFLAGS = -Minform=inform
+#LDFLAGS = 
 # librt is needed for clock_gettime
 LDLIBS = -lrt
 
@@ -19,7 +38,12 @@ default : all
 
 .PHONY : all
 #all : clean $(targets)
-all : $(targets)
+all : clean_jornada $(targets)
+#all : $(targets)
+
+.PHONY :  clean_jornada
+clean_jornada:
+	rm dgemm-jornada.o
 
 benchmark-naive : benchmark.o dgemm-naive.o 
 	$(CC) -o $@ $^ $(LDFLAGS) $(LDLIBS)

@@ -3,14 +3,15 @@ const char* dgemm_desc = "jornada1";
 #define likely(x)	__builtin_expect((x),1)
 #define unlikely(x)	__builtin_expect((x),0)
 
-//#define ALIGNED_BLOCKS
+#define ALIGNED_BLOCKS
+#define TRANSPOSE
 
 #if !defined(BLOCK_SIZE2)
-#define BLOCK_SIZE2 32
+#define BLOCK_SIZE2 160
 #endif
 
 #if !defined(BLOCK_SIZE1)
-#define BLOCK_SIZE1 8
+#define BLOCK_SIZE1 40
 #endif
 
 #define min(a,b) (((a)<(b))?(a):(b))
@@ -110,7 +111,11 @@ static void L1_dgemm (int lda, int I, int J, int K, double* restrict A_T, double
 		for (int i = 0; i < I; i += BLOCK_SIZE1)
 			/* Accumulate block dgemms into block of C */
 			for (int k = 0; k < K; k += BLOCK_SIZE1) {
-				if ( (i<=(I-BLOCK_SIZE1)) && (j<=(J-BLOCK_SIZE1)) && (k<=(K-BLOCK_SIZE1)) ){
+				//__builtin_prefetch(A_T + k + i*lda, 0, 2);
+				//__builtin_prefetch(B   + k + j*lda, 0, 2);
+				//__builtin_prefetch(C   + i + j*lda, 1, 2);
+				//__builtin_prefetch(C   + i + j*lda, 0, 2);
+				if ( (i<=(I-BLOCK_SIZE1)) && (j<=(J-BLOCK_SIZE1)) && (k<=(K-BLOCK_SIZE1))){
 					//do_exact_block(lda, A + i + k*lda, B + k + j*lda, C + i + j*lda);
 					do_exact_block_T(lda, A_T + k + i*lda, B + k + j*lda, C + i + j*lda);
 				} else {
@@ -181,10 +186,12 @@ void square_dgemm (int lda, double* restrict A, double* restrict B, double* rest
 
 	//transpose A
 	//TODO: blocked version?
+#ifdef TRANSPOSE
 	A_T = (double*) malloc(sizeof(double)*lda*lda);
 	for (int i=0; i<lda; i++)
 		for (int j=0; j<lda; j++)
 			A_T[i + lda*j] = A[i*lda + j];
+#endif
 
 	if (lda<=BLOCK_SIZE1) {
 		do_block_T(lda, lda, lda, lda, A_T, B, C);
