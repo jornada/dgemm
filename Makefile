@@ -20,7 +20,7 @@ OPT = -O3 -ffast-math -funroll-loops -fstrict-aliasing -funsafe-loop-optimizatio
 CFLAGS = -Wall -std=gnu99 $(OPT) #-fprofile-use
 #PGI
 #CFLAGS = -Minform=inform -c99 $(OPT) #-fprofile-use
-#CFLAGS = $(OPT)
+#CFLAGS = $(OPT) -std=gnu99
 LDFLAGS = -Wall #-g -ggdb
 #LDFLAGS = -Wall -fprofile-use
 #LDFLAGS = -Wall -fprofile-arcs
