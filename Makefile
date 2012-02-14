@@ -5,10 +5,10 @@
 CC = cc 
 #OPT = -O3 -ffast-math -funroll-loops -fstrict-aliasing -funsafe-loop-optimizations -march=native -msse -msse2 -msse3 -mfpmath=both
 #OPT = -O3 -ffast-math -funroll-loops -fstrict-aliasing -funsafe-loop-optimizations -march=native -msse3 -mfpmath=both
-
-#OPT = -O3 -ffast-math -funroll-loops -fstrict-aliasing -funsafe-loop-optimizations -msse -msse2 -msse3 -mfpmath=sse -fprofile-arcs
-#OPT = -O3 -ffast-math -funroll-loops -fstrict-aliasing -funsafe-loop-optimizations -msse -msse2 -msse3 -mfpmath=both -fprofile-use
-OPT = -O3 -ffast-math -funroll-loops -fstrict-aliasing -funsafe-loop-optimizations -msse -msse2 -msse3 -mfpmath=both
+#OPT = -O3 -ffast-math -funroll-loops -fstrict-aliasing -funsafe-loop-optimizations -msse -msse2 -msse3 -mfpmath=sse -march=amdfam10 -fprofile-arcs
+#OPT = -O3 -ffast-math -funroll-loops -fstrict-aliasing -funsafe-loop-optimizations -msse -msse2 -msse3 -mfpmath=both -march=amdfam10 -fprofile-use
+OPT = -O3 -ffast-math -funroll-loops -fstrict-aliasing -funsafe-loop-optimizations -msse -msse2 -msse3 -mfpmath=both -march=amdfam10 -ftree-vectorize
+#OPT = -g -ggdb
 #OPT = -O3 -ffast-math -funroll-loops -fno-inline -fstrict-aliasing -funsafe-loop-optimizations -march=native -msse3 -mfpmath=both -S
 #PGI
 #OPT = -fast -fastsse -O4 -Mvect -Munroll
@@ -21,7 +21,7 @@ CFLAGS = -Wall -std=gnu99 $(OPT) #-fprofile-use
 #PGI
 #CFLAGS = -Minform=inform -c99 $(OPT) #-fprofile-use
 #CFLAGS = $(OPT)
-LDFLAGS = -Wall
+LDFLAGS = -Wall #-g -ggdb
 #LDFLAGS = -Wall -fprofile-use
 #LDFLAGS = -Wall -fprofile-arcs
 #PGI
@@ -39,17 +39,18 @@ default : all
 
 .PHONY : all
 #all : clean $(targets)
-all : clean_jornada $(targets)
+all : clean_ $(targets)
 #all : $(targets)
 
-.PHONY :  clean_jornada
-clean_jornada:
-	echo $(objects)
-	rm -f dgemm-jornada*.o
+.PHONY :  clean_
+clean_:
+	rm -f dgemm-jornada-auto.o
 
 benchmark-naive : benchmark.o dgemm-naive.o 
 	$(CC) -o $@ $^ $(LDFLAGS) $(LDLIBS)
 benchmark-recursive : benchmark.o dgemm-recursive.o
+	$(CC) -o $@ $^ $(LDFLAGS) $(LDLIBS)
+benchmark-register-blocked : benchmark.o dgemm-register-blocked.o
 	$(CC) -o $@ $^ $(LDFLAGS) $(LDLIBS)
 benchmark-jornada-sse : benchmark.o dgemm-jornada-sse.o
 	$(CC) -o $@ $^ $(LDFLAGS) $(LDLIBS)
@@ -60,6 +61,10 @@ benchmark-jornada : benchmark.o dgemm-jornada.o
 benchmark-blocked : benchmark.o dgemm-blocked.o
 	$(CC) -o $@ $^ $(LDFLAGS) $(LDLIBS)
 benchmark-blas : benchmark.o dgemm-blas.o
+	$(CC) -o $@ $^ $(LDFLAGS) $(LDLIBS)
+benchmark-sse-t : benchmark.o dgemm-see-t.c
+	$(CC) -o $@ $^ $(LDFLAGS) $(LDLIBS)
+benchmark-sse-no-t : benchmark.o dgemm-sse-no-t.c
 	$(CC) -o $@ $^ $(LDFLAGS) $(LDLIBS)
 
 %.o : %.c

@@ -181,7 +181,7 @@ inline static void L2_dgemm (int lda, double* restrict A_T, double* restrict B, 
  *	C := C + A * B
  * where A, B, and C are lda-by-lda matrices stored in column-major format. 
  * On exit, A and B maintain their input values. */	
-void square_dgemm (int lda, double* restrict A, double* restrict B, double* restrict C) {
+void square_dgemm (int lda, const double* A, const double* B, double* restrict C) {
 	double* restrict A_T;
 
 	//transpose A
