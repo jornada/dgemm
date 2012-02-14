@@ -216,7 +216,7 @@ static void L1_dgemm_exact (int lda, const double* A_T, const double* B, double*
 				do_exact_block_4x2(lda, A_T + k + i*lda_A, B + k + j*lda, C + i + j*lda);
 #else
 				if ( (i<=(BLOCK_SIZE2-BLOCK_SIZE1)) && (j<=(BLOCK_SIZE2-BLOCK_SIZE1)) && (k<=(BLOCK_SIZE2-BLOCK_SIZE1)) ){
-					do_exact_block_2x2(lda, A_T + k + i*lda_A, B + k + j*lda, C + i + j*lda);
+					do_exact_block_4x2(lda, A_T + k + i*lda_A, B + k + j*lda, C + i + j*lda);
 				} else {
 					/* Correct block dimensions if block "goes off edge of" the matrix */
 					int I_ = min (BLOCK_SIZE1, BLOCK_SIZE2-i);
