@@ -9,7 +9,7 @@ CC = cc
 #OPT = -O3 -ffast-math -funroll-loops -fstrict-aliasing -funsafe-loop-optimizations -msse -msse2 -msse3 -mfpmath=both -march=amdfam10 -fprofile-use
 OPT = -O3 -ffast-math -funroll-loops -fstrict-aliasing -funsafe-loop-optimizations -msse -msse2 -msse3 -mfpmath=both -march=amdfam10 -ftree-vectorize
 #OPT = -g -ggdb
-#OPT = -O3 -ffast-math -funroll-loops -fno-inline -fstrict-aliasing -funsafe-loop-optimizations -march=native -msse3 -mfpmath=both -S
+#OPT = -O3 -ffast-math -funroll-loops -fstrict-aliasing -funsafe-loop-optimizations -msse -msse2 -msse3 -mfpmath=both -march=amdfam10 -ftree-vectorize -S -fno-inline
 #PGI
 #OPT = -fast -fastsse -O4 -Mvect -Munroll
 #Pathscale
