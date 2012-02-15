@@ -1,18 +1,15 @@
-const char* dgemm_desc = "jornada1";
-
-#define likely(x)	__builtin_expect((x),1)
-#define unlikely(x)	__builtin_expect((x),0)
+#include <stdlib.h>
+const char* dgemm_desc = "dgemm - group #11";
 
 #define ALIGNED_BLOCKS
-#define TRANSPOSE
+#define EXACT_SMALL
+#define EXACT_L1
 
 #if !defined(BLOCK_SIZE2)
-//#define BLOCK_SIZE2 144
 #define BLOCK_SIZE2 416
 #endif
 
 #if !defined(BLOCK_SIZE1)
-//#define BLOCK_SIZE1 24
 #define BLOCK_SIZE1 208
 #endif
 
@@ -23,34 +20,28 @@ const char* dgemm_desc = "jornada1";
 #define ROUND(a,b) ((a/b)*b)
 #define min(a,b) (((a)<(b))?(a):(b))
 
-/*
-#define EXACT(a,b,c,d)\
-	((lda_A==256)||(lda_A==512))? do_exact_block_8x1(a,b,c,d) : do_exact_block_4x2(a,b,c,d)
-#define INEXACT(a,b,c,d,e,f,g)\
-	((lda_A==256)||(lda_A==512))? do_block_8x1(a,b,c,d,e,f,g) : do_block_4x2(a,b,c,d,e,f,g)
-*/
 #define EXACT(a,b,c,d)\
 	((lda_A%256)==0)? do_exact_block_8x1(a,b,c,d) : do_exact_block_4x2(a,b,c,d)
 #define INEXACT(a,b,c,d,e,f,g)\
 	((lda_A%256)==0)? do_block_8x1(a,b,c,d,e,f,g) : do_block_4x2(a,b,c,d,e,f,g)
 
-
-/*
-#define EXACT(a,b,c,d) do_exact_block_4x2(a,b,c,d)
-#define INEXACT(a,b,c,d,e,f,g) do_block_4x2(a,b,c,d,e,f,g)
-*/
-#include <stdlib.h>
-
 static void do_block_2x2 (const int lda, const int M, const int N, const int K, const double* A_T, const double* B, double* restrict C);
+static void do_block_4x2 (const int lda, const int M, const int N, const int K, const double* A_T, const double* B, double* restrict C);
 static void do_exact_block_2x2 (const int lda, const double* A, const double* B, double* restrict C);
 static void do_exact_block_3x2 (const int lda, const double* A, const double* B, double* restrict C);
 static void do_exact_block_4x2 (const int lda, const double* A, const double* B, double* restrict C);
 static void do_exact_block_8x1 (const int lda, const double* A, const double* B, double* restrict C);
 
+#ifdef EXACT_SMALL
 #include "auto_blocks_inc.c"
-//#include "auto_L1_inc.c"
+#endif
+
+#ifdef EXACT_L1
+#include "auto_L1_inc.c"
+#endif
 
 static int lda_A;
+
 
 /* This auxiliary subroutine performs a smaller dgemm operation
  *	C := C + A * B
@@ -432,6 +423,7 @@ static void L1_dgemm (const int lda, const int I, const int J, const int K, cons
 			/* Accumulate block dgemms into block of C */
 			for (int k = 0; k < K; k += BLOCK_SIZE1) {
 				if ( (i<=(I-BLOCK_SIZE1)) && (j<=(J-BLOCK_SIZE1)) && (k<=(K-BLOCK_SIZE1))){
+					//INEXACT (lda, BLOCK_SIZE1, BLOCK_SIZE1, BLOCK_SIZE1, A_T + k + i*lda_A, B + k + j*lda, C + i + j*lda);
 					EXACT (lda, A_T + k + i*lda_A, B + k + j*lda, C + i + j*lda);
 				} else {
 					/* Correct block dimensions if block "goes off edge of" the matrix */
@@ -453,6 +445,7 @@ static void L1_dgemm_exact (const int lda, const double* A_T, const double* B, d
 			/* Accumulate block dgemms into block of C */
 			for (int k = 0; k < BLOCK_SIZE2; k += BLOCK_SIZE1) {
 #ifdef ALIGNED_BLOCKS
+				//INEXACT (lda, BLOCK_SIZE1, BLOCK_SIZE1, BLOCK_SIZE1, A_T + k + i*lda_A, B + k + j*lda, C + i + j*lda);
 				EXACT (lda, A_T + k + i*lda_A, B + k + j*lda, C + i + j*lda);
 #else
 				if ( (i<=(BLOCK_SIZE2-BLOCK_SIZE1)) && (j<=(BLOCK_SIZE2-BLOCK_SIZE1)) && (k<=(BLOCK_SIZE2-BLOCK_SIZE1)) ){
@@ -498,7 +491,6 @@ void square_dgemm (int lda, const double* A, const double* B, double* restrict C
 	double* restrict A_T;
 
 	//transpose A
-#ifdef TRANSPOSE
 	lda_A = ((lda+1)>>1)<<1;
 	posix_memalign((void**) &A_T, 16, sizeof(double)*lda_A*lda);
 	for (int i=0; i<lda; i++) {
@@ -507,13 +499,19 @@ void square_dgemm (int lda, const double* A, const double* B, double* restrict C
 			A_T[j + lda_A*i] = A[j*lda + i];
 		}
 	}
-#endif
 
 	if (lda<=BLOCK_DIRECT) {
+#ifdef EXACT_SMALL
 		exact_blocks[lda](A_T, B, C);
+#else
+		do_block_4x2(lda, lda, lda, lda, A_T, B, C);
+#endif
 	} else if (lda<=BLOCK_SIZE2){
-		//L1_blocks[lda](A_T, B, C);
+#ifdef EXACT_L1
+		L1_blocks[lda](A_T, B, C);
+#else
 		L1_dgemm(lda, lda, lda, lda, A_T, B, C);
+#endif
 	} else {
 		L2_dgemm(lda, A_T, B, C);
 	}

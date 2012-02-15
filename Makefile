@@ -3,31 +3,17 @@
 # Your code must compile (with GCC) with the given CFLAGS. You may experiment with the OPT variable to invoke additional compiler options.
 
 CC = cc 
-#OPT = -O3 -ffast-math -funroll-loops -fstrict-aliasing -funsafe-loop-optimizations -march=native -msse -msse2 -msse3 -mfpmath=both
-#OPT = -O3 -ffast-math -funroll-loops -fstrict-aliasing -funsafe-loop-optimizations -march=native -msse3 -mfpmath=both
-#OPT = -O3 -ffast-math -funroll-loops -fstrict-aliasing -funsafe-loop-optimizations -msse -msse2 -msse3 -mfpmath=sse -march=amdfam10 -fprofile-arcs
+#OPT = -O3 -ffast-math -funroll-loops -fstrict-aliasing -funsafe-loop-optimizations -msse -msse2 -msse3 -mfpmath=both -march=amdfam10 -fprofile-generate
 #OPT = -O3 -ffast-math -funroll-loops -fstrict-aliasing -funsafe-loop-optimizations -msse -msse2 -msse3 -mfpmath=both -march=amdfam10 -fprofile-use
 OPT = -O3 -ffast-math -funroll-loops -fstrict-aliasing -funsafe-loop-optimizations -msse -msse2 -msse3 -mfpmath=both -march=amdfam10 -ftree-vectorize 
-#OPT = -O3 -ffast-math -fstrict-aliasing -msse -msse2 -msse3 -mfpmath=both -march=amdfam10 -ftree-vectorize
 #OPT = -O0 -g -ggdb
 #OPT = -O3 -ffast-math -funroll-loops -fstrict-aliasing -funsafe-loop-optimizations -msse -msse2 -msse3 -mfpmath=both -march=amdfam10 -ftree-vectorize -S -fno-inline
-#PGI
-#OPT = -fast -fastsse -O4 -Mvect -Munroll
-#Pathscale
-#OPT = -Ofast -std=gnu99 -msse -msse2 -msse3 -msse4a -ffast-math
-#OPT = -std=gnu99 -msse -msse2 -msse3 -msse4a -O4 -ffast-math
 
 
 CFLAGS = -Wall -std=gnu99 $(OPT) #-fprofile-use
-#PGI
-#CFLAGS = -Minform=inform -c99 $(OPT) #-fprofile-use
-#CFLAGS = $(OPT) -std=gnu99
 LDFLAGS = -Wall #-g -ggdb
 #LDFLAGS = -Wall -fprofile-use
-#LDFLAGS = -Wall -fprofile-arcs
-#PGI
-#LDFLAGS = -Minform=inform
-#LDFLAGS = 
+#LDFLAGS = -Wall -fprofile-generate
 # librt is needed for clock_gettime
 LDLIBS = -lrt
 
@@ -39,33 +25,22 @@ objects = benchmark.o $(sources:.c=.o)
 default : all
 
 .PHONY : all
-#all : clean $(targets)
 all : clean_ $(targets)
 #all : $(targets)
 
 .PHONY :  clean_
 clean_:
-	rm -f dgemm-jornada-auto.o
+	rm -f dgemm-11.o
 
 benchmark-naive : benchmark.o dgemm-naive.o 
 	$(CC) -o $@ $^ $(LDFLAGS) $(LDLIBS)
 benchmark-recursive : benchmark.o dgemm-recursive.o
 	$(CC) -o $@ $^ $(LDFLAGS) $(LDLIBS)
-benchmark-register-blocked : benchmark.o dgemm-register-blocked.o
-	$(CC) -o $@ $^ $(LDFLAGS) $(LDLIBS)
-benchmark-jornada-sse : benchmark.o dgemm-jornada-sse.o
-	$(CC) -o $@ $^ $(LDFLAGS) $(LDLIBS)
-benchmark-jornada-auto : benchmark.o dgemm-jornada-auto.o
-	$(CC) -o $@ $^ $(LDFLAGS) $(LDLIBS)
-benchmark-jornada : benchmark.o dgemm-jornada.o
+benchmark-11 : benchmark.o dgemm-11.o
 	$(CC) -o $@ $^ $(LDFLAGS) $(LDLIBS)
 benchmark-blocked : benchmark.o dgemm-blocked.o
 	$(CC) -o $@ $^ $(LDFLAGS) $(LDLIBS)
 benchmark-blas : benchmark.o dgemm-blas.o
-	$(CC) -o $@ $^ $(LDFLAGS) $(LDLIBS)
-benchmark-sse-t : benchmark.o dgemm-see-t.c
-	$(CC) -o $@ $^ $(LDFLAGS) $(LDLIBS)
-benchmark-sse-no-t : benchmark.o dgemm-sse-no-t.c
 	$(CC) -o $@ $^ $(LDFLAGS) $(LDLIBS)
 
 %.o : %.c

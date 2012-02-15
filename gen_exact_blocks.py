@@ -2,7 +2,7 @@
 
 import sys, re
 
-f=open('dgemm-jornada-auto.c')
+f=open('dgemm-11.c')
 obj = re.search('#define\s*BLOCK_DIRECT\s*([0-9]+)', f.read())
 f.close()
 
@@ -15,7 +15,7 @@ BLOCK_DIRECT = int(obj.group(1))
 
 f=open('auto_blocks_inc.c', 'w')
 
-for bs in range(1,BLOCK_DIRECT):
+for bs in range(1,BLOCK_DIRECT+1):
 	#size of transposed matrix
 	bs_A = ((bs+1)//2)*2
 	#bs rounded down, used for register blocking
@@ -34,9 +34,9 @@ for bs in range(1,BLOCK_DIRECT):
 	if (bs%2): f.write('#undef BORDER\n')
 	f.write('\n')
 
-f.write('static void (*exact_blocks[%i])(const double*, const double*, double* restrict)={'%(BLOCK_DIRECT));
+f.write('static void (*exact_blocks[%i])(const double*, const double*, double* restrict)={'%(BLOCK_DIRECT+1));
 f.write('NULL');
-for bs in range(1,BLOCK_DIRECT):
+for bs in range(1,BLOCK_DIRECT+1):
 	#f_init.write('exact_blocks[%i] = block_%i;\n'%(bs,bs));
 	f.write(', block_%i'%(bs));
 
