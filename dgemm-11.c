@@ -1,5 +1,6 @@
 #include <stdlib.h>
 const char* dgemm_desc = "dgemm - group #11";
+static int lda_A;
 
 #define ALIGNED_BLOCKS
 #define EXACT_SMALL
@@ -20,17 +21,18 @@ const char* dgemm_desc = "dgemm - group #11";
 #define ROUND(a,b) ((a/b)*b)
 #define min(a,b) (((a)<(b))?(a):(b))
 
-#define EXACT(a,b,c,d)\
-	((lda_A%256)==0)? do_exact_block_8x1(a,b,c,d) : do_exact_block_4x2(a,b,c,d)
-#define INEXACT(a,b,c,d,e,f,g)\
-	((lda_A%256)==0)? do_block_8x1(a,b,c,d,e,f,g) : do_block_4x2(a,b,c,d,e,f,g)
-
 static void do_block_2x2 (const int lda, const int M, const int N, const int K, const double* A_T, const double* B, double* restrict C);
 static void do_block_4x2 (const int lda, const int M, const int N, const int K, const double* A_T, const double* B, double* restrict C);
+static void do_block_8x1 (const int lda, const int M, const int N, const int K, const double* A_T, const double* B, double* restrict C);
 static void do_exact_block_2x2 (const int lda, const double* A, const double* B, double* restrict C);
 static void do_exact_block_3x2 (const int lda, const double* A, const double* B, double* restrict C);
 static void do_exact_block_4x2 (const int lda, const double* A, const double* B, double* restrict C);
 static void do_exact_block_8x1 (const int lda, const double* A, const double* B, double* restrict C);
+
+#define EXACT(a,b,c,d)\
+	((lda_A%256)==0)? do_exact_block_8x1(a,b,c,d) : do_exact_block_4x2(a,b,c,d)
+#define INEXACT(a,b,c,d,e,f,g)\
+	((lda_A%256)==0)? do_block_8x1(a,b,c,d,e,f,g) : do_block_4x2(a,b,c,d,e,f,g)
 
 #ifdef EXACT_SMALL
 #include "auto_blocks_inc.c"
@@ -39,9 +41,6 @@ static void do_exact_block_8x1 (const int lda, const double* A, const double* B,
 #ifdef EXACT_L1
 #include "auto_L1_inc.c"
 #endif
-
-static int lda_A;
-
 
 /* This auxiliary subroutine performs a smaller dgemm operation
  *	C := C + A * B
